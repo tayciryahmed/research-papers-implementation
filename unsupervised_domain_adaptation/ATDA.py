@@ -7,55 +7,52 @@ class ATDA(object):
     def __init__(self, name='mnist-mnistm'):
         pass
 
-    def intial_training(self, inp, F1, F2, source_train, y_train):
-        model = Model([inp], [F1, F2])
-        model.compile(loss=['mse', 'mse'], optimizer='rmsprop', metrics=['accuracy'])
-        model.fit([source_train], [y_train, y_train], nb_epoch=1, batch_size=1)
+    def intial_training(self, inp, F1, F2, Ft, X_source_train, y_source_train, n_epoch, batch_size):
+        model = Model([inp], [F1, F2, Ft])
+        model.compile(loss=['categorical_crossentropy', 'categorical_crossentropy', 'categorical_crossentropy'], optimizer='adam', metrics=['accuracy'])
+        model.fit([X_source_train], [y_source_train, y_source_train, y_source_train], nb_epoch=n_epoch, batch_size=batch_size)
         return model
 
-    def pseudo_labeling(self, output1, output2, data, true_label, threshold=1e-5):
+    def pseudo_labeling(self, output1, output2, X_target_train, threshold):
         id = np.equal(np.argmax(output1,1),np.argmax(output2,1))
         output1 = output1[id,:]
         output2 = output2[id, :]
-        data = data[id, :]
-        true_label = true_label[id, :]
+        data_pseudo_labeled = X_target_train[id, :]
         max1 = np.max(output1,1)
         max2 = np.max(output2,1)
         id2 = np.max(np.vstack((max1,max2)),0)>threshold
         output1 = output1[id2,:]
-        data = data[id2, :]
+        data_pseudo_labeled = data_pseudo_labeled[id2, :]
         pseudo_label = utils.dense_to_one_hot(np.argmax(output1,1),10)
-        true_label = true_label[id2, :]
-        print data.shape, pseudo_label.shape
-        return data, pseudo_label
+        print data_pseudo_labeled.shape, pseudo_label.shape
+        return data_pseudo_labeled, pseudo_label
 
-    def second_training(self, inp, source_train, y_train, target_data, y_target_pseudo_labels, F1, F2, Ft):
-        print source_train.shape, target_data.shape, y_train.shape, y_target_pseudo_labels.shape
-        data = np.concatenate((source_train, target_data))
-        y = np.concatenate((y_train, y_target_pseudo_labels))
+    def second_training(self, inp, X_source_train, y_source_train, X_target_train, y_target_pseudo_labels, F1, F2, Ft, n_epoch, batch_size):
+        print X_source_train.shape, X_target_train.shape, y_source_train.shape, y_target_pseudo_labels.shape
+        data = np.concatenate((X_source_train, X_target_train))
+        y = np.concatenate((y_source_train, y_target_pseudo_labels))
 
         F1F2 = Model([inp], [F1, F2])
-        F1F2.compile(loss=['mse', 'mse'], optimizer='rmsprop', metrics=['accuracy'])
-        F1F2.fit([data], [y, y], nb_epoch=1, batch_size=1)
+        F1F2.compile(loss=['categorical_crossentropy', 'categorical_crossentropy'], optimizer='adam', metrics=['accuracy'])
+        F1F2.fit([data], [y, y], nb_epoch=n_epoch, batch_size=batch_size)
 
         Ft = Model([inp], [Ft])
-        Ft.compile(loss=['mse'], optimizer='rmsprop', metrics=['accuracy'])
-        Ft.fit([target_data], [y_target_pseudo_labels], nb_epoch=1, batch_size=1)
+        Ft.compile(loss=['categorical_crossentropy'], optimizer='adam', metrics=['accuracy'])
+        Ft.fit([X_target_train], [y_target_pseudo_labels], nb_epoch=n_epoch, batch_size=batch_size)
         return F1F2, Ft
 
-    def iterate_algorithm(self, inp, F1, F2, Ft, source_train, y_train, target_data, target_label, iter=1, k=1):
-        for i in range(iter):
-            model = self.intial_training(inp, F1, F2, source_train, y_train)
+    def iterate_algorithm(self, inp, F1, F2, Ft, X_source_train, y_source_train, X_target_train, y_target_train, n_epoch, k, batch_size, threshold):
 
-        output1, output2 = model.predict([target_data])
+        model = self.intial_training(inp, F1, F2, Ft, X_source_train, y_source_train, n_epoch, batch_size)
 
-        data, pseudo_label = self.pseudo_labeling(output1, output2, target_data, target_label)
+        output1, output2, output3 = model.predict([X_target_train])
+
+        data_pseudo_labeled, pseudo_label = self.pseudo_labeling(output1, output2, X_target_train, threshold)
 
         for i in range(k):
-            for j in range(iter):
-                F1F2, Ft = self.second_training(inp, source_train, y_train, data, pseudo_label, F1, F2, Ft)
-                output1, output2 = F1F2.predict([target_data])
-                data, pseudo_label = self.pseudo_labeling(output1, output2, target_data, target_label)
+            F1F2, Ft = self.second_training(inp, X_source_train, y_source_train, data_pseudo_labeled, pseudo_label, F1, F2, Ft, n_epoch, batch_size)
+            output1, output2 = F1F2.predict([X_target_train])
+            data_pseudo_labeled, pseudo_label = self.pseudo_labeling(output1, output2, X_target_train, threshold)
 
         return Ft
 
@@ -95,29 +92,17 @@ class ATDA(object):
         x = Dense(10, activation="softmax")(x)
         return x
 
-    def fit_ATDA(self, source_train, y_train, target_val, y_val, target_data, \
-                    target_label, nb_epoch=5, k_epoch=100, batch_size=128, \
-                    shuffle=True,N_init=5000,N_max=40000):
+
+    def fit_ATDA(self, X_source_train, y_source_train, X_target_test,\
+                        y_target_test, X_target_train, y_target_train, \
+                        threshold, n_epoch, k, batch_size):
 
         F, inp = self.shared_network()
         F1 = self.F1(F)
         F2 = self.F2(F)
         Ft = self.Ft(F)
 
-        Ft = self.iterate_algorithm(inp, F1, F2, Ft, source_train, y_train, target_data, target_label)
-        scores = Ft.evaluate(target_data, [target_label])
+        Ft = self.iterate_algorithm(inp, F1, F2, Ft, X_source_train, y_source_train, X_target_train, y_target_train, n_epoch, k, batch_size, threshold)
+        scores = Ft.evaluate(X_target_test, [y_target_test])
 
-        print '\nevaluate result: mse={}, accuracy={}'.format(*scores)
-
-
-        """
-        # test model
-        model = Model([inp], [F1, F2, F3])
-        model.compile(loss=['mse', 'binary_crossentropy', 'categorical_crossentropy'], optimizer='rmsprop', metrics=['accuracy'])
-
-        model.fit([source_train], [y_train, y_train, y_train], nb_epoch=1, batch_size=1)
-
-        scores = model.evaluate(source_train, [y_train, y_train, y_train])
-
-        print '\nevaluate result: mse={}, binary_crossentropy={}, categorical_crossentropy={}, accuracy={}'.format(*scores)
-        """
+        print '\nevaluate result: categorical_crossentropy={}, accuracy={}'.format(*scores)
