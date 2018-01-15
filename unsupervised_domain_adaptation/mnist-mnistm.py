@@ -5,7 +5,7 @@ from ATDA import ATDA
 from utils import *
 from tensorflow.examples.tutorials.mnist import input_data
 
-mnist = input_data.read_data_sets('../ATDA/MNIST_data', one_hot=True)
+mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 # Process MNIST
 mnist_train = (mnist.train.images > 0).reshape(55000, 28, 28, 1).astype(np.float32)
 mnist_train = np.concatenate([mnist_train, mnist_train, mnist_train], 3)
@@ -14,7 +14,7 @@ mnist_test = np.concatenate([mnist_test, mnist_test, mnist_test], 3)
 
 
 # Load MNIST-M
-mnistm = pkl.load(open('../ATDA/mnistm_data.pkl')) #https://drive.google.com/file/d/1dylmd8Hp0gldo4lJUq2r-8eeqSyQAJBr/view?usp=sharing
+mnistm = pkl.load(open('mnistm_data.pkl')) #https://drive.google.com/file/d/1dylmd8Hp0gldo4lJUq2r-8eeqSyQAJBr/view?usp=sharing
 mnistm_train = mnistm['train']/255.
 mnistm_test = mnistm['test']/255.
 mnistm_valid = mnistm['valid']/255.
