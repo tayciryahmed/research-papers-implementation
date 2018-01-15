@@ -19,14 +19,10 @@ mnistm_train = mnistm['train']/255.
 mnistm_test = mnistm['test']/255.
 mnistm_valid = mnistm['valid']/255.
 
-print mnist_train.shape
-print mnist_test.shape
-print mnistm_train.shape
-print mnistm_test.shape
-print mnist.train.labels.shape
-print mnist.test.labels.shape
-
 model = ATDA()
-model.fit_ATDA(source_train=mnist_train, y_train=mnist.train.labels,
-                       target_val=mnistm_test, y_val=mnist.test.labels,
-                       target_data=mnistm_train,target_label=mnist.train.labels)
+model.fit_ATDA(X_source_train=mnist_train[:100, :], y_source_train=mnist.train.labels[:100],
+                       X_target_test=mnistm_test[:50, :], y_target_test=mnist.test.labels[:50],
+                       X_target_train=mnistm_train[:100, :], y_target_train=mnist.train.labels[:100],
+                      threshold=0, n_epoch=1, k=1, batch_size=1)
+
+# threshold=0.9, n_epoch=5, k=100, batch_size=128
