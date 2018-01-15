@@ -1,60 +1,63 @@
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, LSTM
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, LSTM
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Flatten
-from keras.layers import Embedding
-from keras.layers import Conv2D, MaxPooling2D, Embedding, Merge, Dropout, BatchNormalization
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
-from keras.utils import to_categorical
-from keras.layers import Dense, Input, GlobalMaxPooling1D
-from keras.layers import Conv1D, MaxPooling1D, Embedding
+from keras.layers import Conv2D, MaxPooling2D, Input, Dropout, BatchNormalization, Dense, Flatten
 from keras.models import Model
-
 import numpy as np
-import random
 import utils
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, LSTM
 
 class ATDA(object):
     def __init__(self, name='mnist-mnistm'):
         pass
 
-    """
     def intial_training(self, inp, F1, F2, source_train, y_train):
         model = Model([inp], [F1, F2])
         model.compile(loss=['mse', 'mse'], optimizer='rmsprop', metrics=['accuracy'])
-        model.fit([source_train], [y_train, y_train, nb_epoch=1, batch_size=1)
+        model.fit([source_train], [y_train, y_train], nb_epoch=1, batch_size=1)
         return model
 
-    def pseudo_labeling(self, model, target_data):
-        return y_target_pseudo_labels
+    def pseudo_labeling(self, output1, output2, data, true_label, threshold=1e-5):
+        id = np.equal(np.argmax(output1,1),np.argmax(output2,1))
+        output1 = output1[id,:]
+        output2 = output2[id, :]
+        data = data[id, :]
+        true_label = true_label[id, :]
+        max1 = np.max(output1,1)
+        max2 = np.max(output2,1)
+        id2 = np.max(np.vstack((max1,max2)),0)>threshold
+        output1 = output1[id2,:]
+        data = data[id2, :]
+        pseudo_label = utils.dense_to_one_hot(np.argmax(output1,1),10)
+        true_label = true_label[id2, :]
+        print data.shape, pseudo_label.shape
+        return data, pseudo_label
 
-    def second_training(self, inp, source_train, y_train, target_data, y_target_pseudo_labels, F1, f2, Ft):
-        data = np.concatenate(source_train, target_data)
-        y = np.concatenate(y_train, y_target_pseudo_labels)
+    def second_training(self, inp, source_train, y_train, target_data, y_target_pseudo_labels, F1, F2, Ft):
+        print source_train.shape, target_data.shape, y_train.shape, y_target_pseudo_labels.shape
+        data = np.concatenate((source_train, target_data))
+        y = np.concatenate((y_train, y_target_pseudo_labels))
 
         F1F2 = Model([inp], [F1, F2])
         F1F2.compile(loss=['mse', 'mse'], optimizer='rmsprop', metrics=['accuracy'])
         F1F2.fit([data], [y, y], nb_epoch=1, batch_size=1)
 
         Ft = Model([inp], [Ft])
-        Ft.compile(loss=['mse', 'mse'], optimizer='rmsprop', metrics=['accuracy'])
+        Ft.compile(loss=['mse'], optimizer='rmsprop', metrics=['accuracy'])
         Ft.fit([target_data], [y_target_pseudo_labels], nb_epoch=1, batch_size=1)
-        return F1f2, Ft
+        return F1F2, Ft
 
-    def iterative(self, F1, F2, F3, source_train, y_train, target_data, target_label, iter):
+    def iterate_algorithm(self, inp, F1, F2, Ft, source_train, y_train, target_data, target_label, iter=1, k=1):
         for i in range(iter):
+            model = self.intial_training(inp, F1, F2, source_train, y_train)
 
+        output1, output2 = model.predict([target_data])
 
-    """
+        data, pseudo_label = self.pseudo_labeling(output1, output2, target_data, target_label)
 
+        for i in range(k):
+            for j in range(iter):
+                F1F2, Ft = self.second_training(inp, source_train, y_train, data, pseudo_label, F1, F2, Ft)
+                output1, output2 = F1F2.predict([target_data])
+                data, pseudo_label = self.pseudo_labeling(output1, output2, target_data, target_label)
+
+        return Ft
 
     def shared_network(self):
         inp = Input(shape=(28,28,3))
@@ -99,14 +102,22 @@ class ATDA(object):
         F, inp = self.shared_network()
         F1 = self.F1(F)
         F2 = self.F2(F)
-        F3 = self.Ft(F)
+        Ft = self.Ft(F)
 
-        print F1.shape, F2.shape, F3.shape
+        Ft = self.iterate_algorithm(inp, F1, F2, Ft, source_train, y_train, target_data, target_label)
+        scores = Ft.evaluate(target_data, [target_label])
+
+        print '\nevaluate result: mse={}, accuracy={}'.format(*scores)
+
+
+        """
+        # test model
         model = Model([inp], [F1, F2, F3])
         model.compile(loss=['mse', 'binary_crossentropy', 'categorical_crossentropy'], optimizer='rmsprop', metrics=['accuracy'])
 
         model.fit([source_train], [y_train, y_train, y_train], nb_epoch=1, batch_size=1)
 
-        scores = model.evaluate(source_train, [y_train, y_train, y_train], verbose=0)
+        scores = model.evaluate(source_train, [y_train, y_train, y_train])
 
         print '\nevaluate result: mse={}, binary_crossentropy={}, categorical_crossentropy={}, accuracy={}'.format(*scores)
+        """
