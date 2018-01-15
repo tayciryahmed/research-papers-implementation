@@ -14,7 +14,7 @@ mnist_test = np.concatenate([mnist_test, mnist_test, mnist_test], 3)
 
 
 # Load MNIST-M
-mnistm = pkl.load(open('../ATDA/mnistm_data.pkl'))
+mnistm = pkl.load(open('../ATDA/mnistm_data.pkl')) #https://drive.google.com/file/d/1dylmd8Hp0gldo4lJUq2r-8eeqSyQAJBr/view?usp=sharing
 mnistm_train = mnistm['train']/255.
 mnistm_test = mnistm['test']/255.
 mnistm_valid = mnistm['valid']/255.
