@@ -134,7 +134,7 @@ class ATDA(object):
 
             output1, output2 = modelF1F2.predict([X_target_train])
 
-            Nt = int((float(i) / k) * X_target_train.shape[0])
+            Nt = int((float(i) / 20) * X_target_train.shape[0])
 
             if Nt > 40000: break
 
