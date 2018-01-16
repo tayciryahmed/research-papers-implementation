@@ -14,7 +14,7 @@ class ATDA(object):
         inp = Input(shape=(28,28,3))
         x = Conv2D(kernel_size=(5,5), filters=32, strides=(1, 1), activation="relu", padding="same")(inp)
         x = MaxPooling2D(pool_size=(2, 2), strides=(2,2), padding='same')(x)
-        x = Conv2D(kernel_size=(5,5), filters=48, strides=(1, 1), activation="relu", padding="same")(inp)
+        x = Conv2D(kernel_size=(5,5), filters=48, strides=(1, 1), activation="relu", padding="same")(x)
         x = MaxPooling2D(pool_size=(2, 2), strides=(2,2), padding='same')(x)
 	x = BatchNormalization()(x)
         x = Flatten()(x)
@@ -55,7 +55,7 @@ class ATDA(object):
         output1 = output1[id2,:]
         data_pseudo_labeled = data_pseudo_labeled[id2, :]
         pseudo_label = utils.dense_to_one_hot(np.argmax(output1,1),10)
-	data_pseudo_labeled, pseudo_label = resample (data_pseudo_labeled, pseudo_label, replace=False, n_samples=Nt, random_state=42)
+	data_pseudo_labeled, pseudo_label = resample (data_pseudo_labeled, pseudo_label, replace=True, n_samples=Nt, random_state=42)
         return data_pseudo_labeled, pseudo_label
 
     def intial_training(self, inp, F1, F2, Ft, X_source_train, y_source_train, n_epoch, batch_size_F1F2, batch_size_Ft, lr):
