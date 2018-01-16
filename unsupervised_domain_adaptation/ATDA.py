@@ -55,7 +55,7 @@ class ATDA(object):
         output1 = output1[id2,:]
         data_pseudo_labeled = data_pseudo_labeled[id2, :]
         pseudo_label = utils.dense_to_one_hot(np.argmax(output1,1),10)
-	data_pseudo_labeled, pseudo_label = resample (data_pseudo_labeled, pseudo_label, replace=True, n_samples=Nt, random_state=42)
+	data_pseudo_labeled, pseudo_label = resample (data_pseudo_labeled, pseudo_label, replace=False, n_samples=Nt, random_state=42)
         return data_pseudo_labeled, pseudo_label
 
     def intial_training(self, inp, F1, F2, Ft, X_source_train, y_source_train, n_epoch, batch_size_F1F2, batch_size_Ft, lr):
@@ -100,6 +100,7 @@ class ATDA(object):
             F1F2, Ft_model = self.second_training(inp, X_source_train, y_source_train, data_pseudo_labeled, pseudo_label, F1, F2, Ft, n_epoch, batch_size_F1F2, batch_size_Ft, lr, X_target_valid, y_target_valid)
             output1, output2 = F1F2.predict([X_target_train])
 	    Nt = int((float(i)/k) * X_target_train.shape[0])
+	    if Nt>40000 : break
             data_pseudo_labeled, pseudo_label = self.pseudo_labeling(output1, output2, X_target_train, threshold, Nt)
 
 	    scores = Ft_model.evaluate(X_target_test, [y_target_test], verbose=2)
