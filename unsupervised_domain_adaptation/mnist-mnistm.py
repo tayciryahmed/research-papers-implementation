@@ -30,5 +30,5 @@ model.fit_ATDA(X_source_train=mnist_train, y_source_train=mnist.train.labels,
 model.fit_ATDA(X_source_train=mnist_train[:1000, :], y_source_train=mnist.train.labels[:1000],
                        X_target_test=mnistm_test[:1000, :], y_target_test=mnist.test.labels[:1000],
                        X_target_train_valid=mnistm_train[:1000, :], y_target_train_valid=mnist.train.labels[:1000],
-                      threshold=0, n_epoch=1, k=1, batch_size_F1F2=1, batch_size_Ft=1, lr=0.01)
+                      threshold=0, n_epoch=3000, k=30, batch_size_F1F2=1, batch_size_Ft=1, lr=0.01)
 """
